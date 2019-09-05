@@ -1,0 +1,40 @@
+#! /usr/libexec/platform-python
+
+## This runs after insights-client has done an upload.  It's a sketch
+## of what we would like insights-client do itself, for the benefit of
+## the Cockpit web console.
+
+import os
+import requests
+import tempfile
+import json
+
+cert = ("/etc/pki/consumer/cert.pem", "/etc/pki/consumer/key.pem")
+
+def inventory_call(path, params=None):
+    return (requests.get("https://cert.cloud.redhat.com/api/inventory/v1" + path, params=params,
+                         cert=cert)
+            .json())
+
+def insights_call(path):
+    return (requests.get("https://cert-api.access.redhat.com/r/insights/v3" + path,
+                         verify="/etc/rhsm/ca/redhat-uep.pem", cert=cert)
+            .json())
+
+machine_id = open("/etc/insights-client/machine-id").read()
+inventory_data = inventory_call("/hosts", { "insights_id": machine_id })["results"][0]
+reports = insights_call("/systems/" + machine_id + "/reports")["reports"]
+
+data = {
+    "insights_url": "https://cloud.redhat.com/insights/inventory/" + inventory_data["id"],
+    "reports": reports
+}
+
+def write_atomically(path, writer):
+    with tempfile.NamedTemporaryFile(mode="w", dir=os.path.dirname(path), delete=False) as fo:
+            writer(fo)
+            fo.flush()
+            os.rename(fo.name, path)
+
+write_atomically("/var/lib/insights/status.json",
+                 lambda f: f.write(json.dumps(data) + "\n"))
