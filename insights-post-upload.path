@@ -1,0 +1,6 @@
+[Unit]
+Description=Insights post-upload trigger
+
+[Path]
+PathChanged=/etc/insights-client/.lastupload
+Unit=insights-post-upload.service

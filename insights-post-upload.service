@@ -1,0 +1,6 @@
+[Unit]
+Description=Insights post-upload processing
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/insights-post-upload
